@@ -1,5 +1,5 @@
 alembic==1.5.5
-apache-airflow==1.10.9
+apache-airflow==1.10.13
 apache-airflow-providers-ftp==1.0.1
 apache-airflow-providers-http==1.1.0
 apache-airflow-providers-imap==1.0.1
@@ -53,7 +53,7 @@ importlib-resources==1.5.0
 inflection==0.5.1
 iso8601==0.1.14
 itsdangerous==1.1.0
-Jinja2==2.10.3
+Jinja2==2.11.3
 jmespath==0.10.0
 json-merge-patch==0.2
 jsonschema==3.2.0
@@ -105,7 +105,7 @@ thrift==0.13.0
 typing-extensions==3.7.4.3
 tzlocal==1.5.1
 unicodecsv==0.14.1
-urllib3==1.26.3
+urllib3==1.26.4
 Werkzeug==0.16.1
 WTForms==2.3.3
 zipp==3.4.0
