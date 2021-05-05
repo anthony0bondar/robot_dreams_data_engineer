@@ -1,10 +1,27 @@
+import requests
+import json
+import os
+
 from datetime import datetime
+from datetime import timedelta
 
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 
-from currency_for_airflow import currency
 
+def currency(**kwargs):
+    BASE_URL = "https://api.ratesapi.io/api/latest"
+    base_currencies = ['EUR', 'USD', 'PLN', 'GBP']
+    os.makedirs(os.path.join('home', 'user', 'data', str(kwargs['execution_date'])), exist_ok=True)
+    for base in base_currencies:
+
+        query = {"base": base}
+        response = requests.get(BASE_URL, params=query)
+
+        response.raise_for_status()
+
+        with open(os.path.join('home', 'user', 'data', str(kwargs['execution_date']), f'currencies_{base}.json'), 'w') as f:
+            json.dump(response.json(), f)
 
 
 default_args = {
@@ -14,23 +31,19 @@ default_args = {
     'retries': 2
 }
 
+
 dag = DAG(
     'currency_dag',
-    description='currency dag',
     schedule_interval='@daily',
-    start_date=datetime(2021,2,23,1,0),
+    start_date=datetime(2021, 4, 26, 13),
     default_args=default_args
 )
 
 t1 = PythonOperator(
     task_id='currency_function',
     dag=dag,
-    python_callable=currency
+    python_callable=currency,
+    provide_context=True
 )
 
-import pandas
-from zipfile import ZipFile
-from boto3.session import Session
-session=Session()
-s3 = session.resource('s3')
-b = s3.Bucket()
+
