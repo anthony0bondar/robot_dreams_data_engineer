@@ -1,0 +1,16 @@
+currency_app:
+  url: "http://api.exchangeratesapi.io/v1/"
+  access_key: "381114cf116cbcfc4f05e4eb44625659"
+  symbols:
+    - 'GBP'
+    - 'RUB'
+    - 'UAH'
+    - 'USD'
+    - 'PLN'
+  directory: "./data/"
+
+app2:
+  test: 1
+
+app3:
+  test: 2
