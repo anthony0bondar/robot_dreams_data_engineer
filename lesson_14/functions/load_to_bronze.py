@@ -1,36 +1,53 @@
-import os
+import psycopg2
 import logging
+import os
+
+from hdfs import InsecureClient
+from airflow.hooks.base_hook import BaseHook
 
 import pyspark
 from pyspark.sql import SparkSession
-from airflow.hooks.base_hook import BaseHook
 
 
 def load_to_bronze(table):
 
-    connection = BaseHook.get_connection("oltp_postgres")
+    hdfs_conn = BaseHook.get_connection('datalake_hdfs')
+    pg_conn = BaseHook.get_connection('oltp_postgres')
     pg_creds = {
-        'host': connection.host
-        , 'port': connection.port
-        , 'database': 'postgres'
-        , 'user': connection.login
-        , 'password': connection.password
+        'host': pg_conn.host,
+        'port': pg_conn.port,
+        'user': pg_conn.login,
+        'password': pg_conn.password,
+        'database': 'postgres'
     }
 
+    logging.info(f"Writing table {table} from {pg_conn.host} to Bronze")
+    client = InsecureClient("http://"+hdfs_conn.host, user=hdfs_conn.login)
+    with psycopg2.connect(**pg_creds) as pg_connection:
+        cursor = pg_connection.cursor()
+        with client.write(os.path.join('/', 'new_datalake', 'bronze', table)) as csv_file:
+            cursor.copy_expert(f"COPY {table} TO STDOUT WITH HEADER CSV", csv_file)
+    logging.info("Successfully loaded")
+
+
+def load_to_bronze_spark(table):
+
+    pg_conn = BaseHook.get_connection('oltp_postgres')
+
+    pg_url = f"jdbc:postgresql://{pg_conn.host}:{pg_conn.port}/postgres"
+    pg_properties = {"user": pg_conn.login, "password": pg_conn.password}
+
     spark = SparkSession.builder \
-        .config('spark.driver.extraClassPath', '/home/user/shared_folder/postgresql-42.2.20.jar') \
-        .config('spark.jars', '/home/user/shared_folder/postgresql-42.2.20.jar') \
+        .config('spark.driver.extraClassPath'
+                , '/home/user/shared_folder/postgresql-42.2.23.jar') \
         .master('local') \
-        .appName("lesson") \
+        .appName('lesson_14') \
         .getOrCreate()
 
-    df = spark.read.jdbc("jdbc:postgresql://127.0.0.1:5432/postgres"
-                         , table=table
-                         , properties={"user": "pguser", "password": "secret", "driver": "org.postgresql.Driver"})
+    logging.info(f"Writing table {table} from {pg_conn.host} to Bronze")
+    table_df = spark.read.jdbc(pg_url, table=table, properties=pg_properties)
+    table_df.write.parquet(
+        os.path.join('/', 'new_datalake', 'bronze', table),
+        mode="overwrite")
 
-    df.write.parquet(f"/bronze/{table}", mode="overwrite")
-    logging.info("table saved to bronze")
-
-
-if __name__ == '__main__':
-    load_to_bronze('staff')
+    logging.info("Successfully loaded")
